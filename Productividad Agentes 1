@@ -1,33 +1,96 @@
 WITH Citaciones AS (
-   SELECT DISTINCT conversationid,
-       TO_CHAR(participantstarttime, 'DD/MM/YYYY') AS fecha,
-       value AS N_Citacion,
-       key
-   FROM gns_purecloud.conversation_attributes
-   WHERE purpose = 'agent'
-       AND key = 'dialerContactId'
-       AND participantstarttime >= '2024-11-21 00:00'
+    SELECT DISTINCT conversationid,
+        TO_CHAR(participantstarttime, 'DD/MM/YYYY') AS fecha,
+        TO_CHAR(participantstarttime, 'HH24:MI:SS') AS hora,
+        value AS N_Citacion,
+        key
+    FROM gns_purecloud.conversation_attributes
+    WHERE purpose = 'agent'
+        AND key = 'dialerContactId'
+        AND TO_DATE(TO_CHAR(participantstarttime, 'YYYY-MM-DD'), 'YYYY-MM-DD') BETWEEN TO_DATE('2025-01-01', 'YYYY-MM-DD') AND TO_DATE('2025-01-31', 'YYYY-MM-DD')
 ),
 DetallesConversaciones AS (
-   SELECT conversationid,
-       TO_CHAR(conversationstart, 'DD/MM/YYYY') AS fecha,
-       wrapupcodename AS tipificacion,
-       username AS agente,
-       userid,
-       dnis AS telefono,
-       queuename
-   FROM gns_purecloud.conversations_details
-   WHERE segmenttype = 'wrapup'
-       AND username NOT IN ('Jhon Esneider Jimenez Obando', 'Support GNS - 1', 'Andrés Felipe Díaz Guzmán')
-       AND queuename LIKE 'Outbound%'
-       AND wrapupcodename LIKE 'Out%')
+    SELECT conversationid,
+        TO_CHAR(conversationstart, 'DD/MM/YYYY') AS fecha,
+        wrapupcodename AS tipificacion,
+        username AS agente,
+        dnis AS telefono,
+        queuename,
+        duration
+    FROM gns_purecloud.conversations_details
+    WHERE segmenttype = 'wrapup'
+        AND username NOT IN ('Jhon Esneider Jimenez Obando', 'Support GNS - 1', 'Andrés Felipe Díaz Guzmán')
+        AND queuename LIKE 'Outbound%'
+        AND wrapupcodename LIKE 'Out%'
+),
+TiempoTotal AS (
+    SELECT conversationid,
+        duration AS tiempo_total
+    FROM gns_purecloud.conversations_details
+    WHERE segmenttype = 'interact'
+        AND disconnecttype = 'peer'
+),
+UltimaLlamadaPorTelefono AS (
+    SELECT
+        cd.fecha,
+        cd.conversationid,
+        ca.hora,
+        ca.N_Citacion,
+        cd.tipificacion,
+        CASE
+            WHEN LOWER(cd.tipificacion) IN (
+                'outbound - paciente no ha realizado pago',
+                'out - cancela cita',
+                'out-cancela cita_ubicado',
+                'out - cancelado',
+                'out - confirmado por whatsapp',
+                'out-confirmado_ubicado',
+                'out - devolución o rellamado',
+                'out-devolución o rellamado_ubicado',
+                'out - paciente desea reasignar',
+                'out-reasigna cita_ubicado',
+                'out - reasignado',
+                'out-sin autorización o pendiente gestión (tramite interno)_ubicado',
+                'out - confirmado',
+                'out - sin autorización / pendiente gestión (tramite interno)'
+            ) THEN 'Ubicado'
+            WHEN LOWER(cd.tipificacion) IN (
+                'out - no ubicado',
+                'out-no ubicado_no ubicado',
+                'out-numero errado o sin registro_no ubicado',
+                'out - numero telefonico fuera de servicio',
+                'out - paciente gestionado - no ubicado',
+                'out - paciente sin autorización - tramite interno',
+                'out - rellamado - paciente no ubicado'
+            ) THEN 'No Ubicado'
+            ELSE 'No Aplica'
+        END AS estado_ubicacion,
+        cd.agente,
+        SUBSTRING(cd.telefono, 6) AS telefono,
+        cd.queuename,
+        cd.duration,
+        tt.tiempo_total,
+        tt.tiempo_total / 84600.0 AS tiempo_total_dividido,
+        ROW_NUMBER() OVER (PARTITION BY cd.fecha, SUBSTRING(cd.telefono, 6) ORDER BY ca.hora DESC) AS fila_num
+    FROM Citaciones AS ca
+    LEFT JOIN DetallesConversaciones AS cd
+    ON ca.conversationid = cd.conversationid
+    LEFT JOIN TiempoTotal AS tt
+    ON ca.conversationid = tt.conversationid
+    WHERE cd.queuename != 'Gestion Inasistencia V 2.0'
+)
 SELECT
-fecha,
-userid,
-tipificacion,
-COUNT(tipificacion)
-FROM DetallesConversaciones
-GROUP BY
-fecha,
-userid,
-tipificacion
+    fecha,
+    conversationid,
+    hora,
+    N_Citacion,
+    tipificacion,
+    estado_ubicacion,
+    agente,
+    telefono,
+    queuename,
+    duration,
+    tiempo_total,
+    tiempo_total_dividido
+FROM UltimaLlamadaPorTelefono
+WHERE fila_num = 1

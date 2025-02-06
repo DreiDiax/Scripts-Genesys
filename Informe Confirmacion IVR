@@ -1,0 +1,64 @@
+WITH conversation_attributes_icl AS 
+(
+    SELECT 
+        conversationid,
+        value,
+        participantstarttime
+    FROM gns_purecloud.conversation_attributes
+    WHERE participantname = '002-FVL-PROD-Outbound_Confirmacio_SinAgente_Campana'
+      AND TO_CHAR(participantstarttime, 'YYYY-MM-DD') >= '2024-10-01'
+      AND key = 'dialerContactId'
+),
+conversation_summary_icl AS 
+(
+    SELECT 
+        conversationid,
+        username,
+        queuename,
+        ani
+    FROM gns_purecloud.agent_summary_v2
+),
+conversation_details_icl AS 
+(
+    SELECT 
+        conversationid,
+        wrapupcodename
+    FROM gns_purecloud.conversations_details
+),
+conversation_info AS 
+(
+    SELECT 
+        conversationid,
+        MAX(CASE WHEN "key" = 'Identificacion' THEN value END) AS Cedula,
+        MAX(CASE WHEN "key" = 'IdCita' THEN value END) AS Id_Cita,
+        MAX(CASE WHEN "key" = 'CitaMotivo' THEN value END) AS Motivo,
+        MAX(case when "key" = 'customerName' then value end) as boton
+    FROM 
+        gns_purecloud.conversation_attributes
+    WHERE 
+    	purpose = 'customer'
+    GROUP BY 
+        conversationid        
+)
+SELECT
+    ci.Cedula,
+    ci.Id_Cita,
+    ci.Motivo,
+    ca.value AS id_citacion,
+    ca.conversationid AS id_llamada,
+    TO_CHAR(ca.participantstarttime, 'DD/MM/YYYY') AS fecha,
+    cs.username AS nombre_agente,
+    cs.queuename AS nombre_cola,
+    cs.ani AS telefono,
+    cd.wrapupcodename AS nombre_wrapup
+FROM 
+    conversation_info AS ci
+LEFT JOIN 
+    conversation_attributes_icl AS ca 
+    ON ci.conversationid = ca.conversationid
+LEFT JOIN 
+    conversation_summary_icl AS cs 
+    ON ca.conversationid = cs.conversationid
+LEFT JOIN 
+    conversation_details_icl AS cd 
+    ON ca.conversationid = cd.conversationid

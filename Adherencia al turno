@@ -1,0 +1,58 @@
+WITH login AS (
+  SELECT
+      userid,
+      username,
+      to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5','DD/MM/YYYY') AS date,
+      to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5', 'HH24:MI:SS') AS login,
+      ROW_NUMBER() OVER (PARTITION BY username, to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5','DD/MM/YYYY')
+                          ORDER BY presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5') AS login_order
+  FROM gns_purecloud.primary_presence
+  WHERE organizationpresence = 'En la cola'
+  AND presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5' >= '2025-01-01 00:00:00'
+),
+bm AS (
+  SELECT
+      username,
+      to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5','DD/MM/YYYY') AS date,
+      SUM(duration) AS total_morning_break_ms
+  FROM gns_purecloud.primary_presence
+  WHERE organizationpresence = 'Descanso'
+  AND to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5', 'HH24') BETWEEN '06' AND '12'
+  AND presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5' >= '2025-01-01 00:00:00'
+  GROUP BY username, to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5','DD/MM/YYYY')
+),
+bt AS (
+  SELECT
+      username,
+      to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5','DD/MM/YYYY') AS date,
+      SUM(duration) AS total_afternoon_break_ms
+  FROM gns_purecloud.primary_presence
+  WHERE organizationpresence = 'Descanso'
+  AND to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5', 'HH24') BETWEEN '13' AND '18'
+  AND presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5' >= '2025-01-01 00:00:00'
+  GROUP BY username, to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5','DD/MM/YYYY')
+),
+a AS (
+  SELECT
+      username,
+      to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5','DD/MM/YYYY') AS date,
+      SUM(duration) AS total_lunch_ms
+  FROM gns_purecloud.primary_presence
+  WHERE organizationpresence = 'Comida'
+  AND presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5' >= '2025-01-01 00:00:00'
+  GROUP BY username, to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5','DD/MM/YYYY')
+)
+SELECT
+  lg.username,
+  lg.userid,
+  lg.date,
+  lg.login,
+  to_char(INTERVAL '1 millisecond' * COALESCE(bm.total_morning_break_ms, 0), 'HH24:MI:SS') AS break_mañana_time,
+  to_char(INTERVAL '1 millisecond' * COALESCE(bt.total_afternoon_break_ms, 0), 'HH24:MI:SS') AS break_tarde_time,
+  to_char(INTERVAL '1 millisecond' * COALESCE(a.total_lunch_ms, 0), 'HH24:MI:SS') AS almuerzo_time
+FROM login lg
+LEFT JOIN bm ON lg.username = bm.username AND lg.date = bm.date
+LEFT JOIN bt ON lg.username = bt.username AND lg.date = bt.date
+LEFT JOIN a ON lg.username = a.username AND lg.date = a.date
+WHERE lg.login_order = 1
+ORDER BY date;

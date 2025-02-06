@@ -1,0 +1,33 @@
+WITH Citaciones AS (
+   SELECT DISTINCT conversationid,
+       TO_CHAR(participantstarttime, 'DD/MM/YYYY') AS fecha,
+       value AS N_Citacion,
+       key
+   FROM gns_purecloud.conversation_attributes
+   WHERE purpose = 'agent'
+       AND key = 'dialerContactId'
+       AND participantstarttime >= '2024-11-21 00:00'
+),
+DetallesConversaciones AS (
+   SELECT conversationid,
+       TO_CHAR(conversationstart, 'DD/MM/YYYY') AS fecha,
+       wrapupcodename AS tipificacion,
+       username AS agente,
+       userid,
+       dnis AS telefono,
+       queuename
+   FROM gns_purecloud.conversations_details
+   WHERE segmenttype = 'wrapup'
+       AND username NOT IN ('Jhon Esneider Jimenez Obando', 'Support GNS - 1', 'Andrés Felipe Díaz Guzmán')
+       AND queuename LIKE 'Outbound%'
+       AND wrapupcodename LIKE 'Out%')
+SELECT
+fecha,
+userid,
+tipificacion,
+COUNT(tipificacion)
+FROM DetallesConversaciones
+GROUP BY
+fecha,
+userid,
+tipificacion

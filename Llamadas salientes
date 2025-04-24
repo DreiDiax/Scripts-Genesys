@@ -1,0 +1,56 @@
+with a as (
+select
+	conversationid,
+	externalcontactid,
+	participantstarttime,
+	participantendtime,
+	participantname,
+	participantid,
+	purpose,
+	value,
+	"key"
+from
+	gns_purecloud.conversation_attributes
+where
+	participantstarttime between '2025-03-02' and '2025-03-08'
+	and key = 'dialerCampaignId'
+	and participantname in ('Fundacion Valle del LIli','FVL')
+),
+d as (
+select
+	conversationid,
+	to_char(conversationstart,'DD/MM/YYYY') as fecha,
+	to_char(conversationstart,'HH24:MI:00') as hora,
+	queuename,
+	participantname,
+	purpose,
+	dnis,
+	mediatype,
+	segmentstart,
+	segmenttype
+from
+	gns_purecloud.conversations_details
+where
+	conversationstart between '2025-03-02' and '2025-03-08'
+and originatingdirection = 'outbound'
+and segmenttype = 'dialing'
+and purpose = 'customer'
+)
+select 
+	d.conversationid,
+	d.fecha,
+	d.hora,
+	d.queuename,
+	d.participantname,
+	d.dnis,
+	d.segmentstart,
+	d.segmenttype,
+	case 
+		when a.value = '1389ee99-f696-404b-8028-2dba9a3a5e19' then 'Aproximación'
+		when a.value = 'e685438d-4e65-4ecc-9893-fe0190a39f76' then 'IVR'
+		when a.value = 'c781835a-80bb-4632-84b1-c8ff617caa6c' then 'IVR_Ambulatorios'
+		when a.value = 'd3b05a3a-9695-4e20-b88e-9af99c1f8f25' then 'Recordatorio'
+		else 'llamadas'
+	end as campaign_name
+from d
+left join a on d.conversationid = a.conversationid

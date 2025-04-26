@@ -10,7 +10,7 @@ WITH conversation_attributes_icl AS
       AND key = 'dialerContactId'
 ),
 conversation_summary_icl AS 
-(
+( 
     SELECT 
         conversationid,
         username,

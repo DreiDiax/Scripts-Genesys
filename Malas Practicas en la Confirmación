@@ -65,7 +65,7 @@ UltimaLlamadaPorTelefono AS (
         SUBSTRING(cd.telefono, 6) AS telefono,
         cd.queuename,
         mp.mala_practica,
-        cd.tiempos,  -- Incluimos la nueva columna
+        cd.tiempos,  
         ROW_NUMBER() OVER (PARTITION BY cd.fecha, SUBSTRING(cd.telefono, 6) ORDER BY ca.hora DESC) AS fila_num
     FROM Citaciones AS ca
     LEFT JOIN DetallesConversaciones AS cd ON ca.conversationid = cd.conversationid
@@ -82,6 +82,6 @@ SELECT
     telefono,
     queuename,
     mala_practica,
-    tiempos  -- Mostramos la nueva columna en el resultado final
+    tiempos  
 FROM UltimaLlamadaPorTelefono
 WHERE fila_num = 1

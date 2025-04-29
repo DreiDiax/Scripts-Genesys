@@ -6,19 +6,19 @@
 WITH Citaciones AS (
     SELECT DISTINCT conversationid,
         TO_CHAR(participantstarttime, 'DD/MM/YYYY') AS fecha,
-        TO_CHAR(participantstarttime, 'HH24:MI:SS') AS hora,
+        TO_CHAR(participantstarttime - INTERVAL '5' HOUR, 'HH24:MI:SS') AS hora,
         value AS N_Citacion,
         key
     FROM gns_purecloud.conversation_attributes
     WHERE purpose = 'agent'
         AND key = 'dialerContactId'
-        AND TO_DATE(TO_CHAR(participantstarttime, 'YYYY-MM-DD'), 'YYYY-MM-DD') BETWEEN '2025-01-01' AND '2025-04-23'
+        AND TO_DATE(TO_CHAR(participantstarttime, 'YYYY-MM-DD'), 'YYYY-MM-DD') > '2025-01-01'
 ),
 DetallesConversaciones AS (
     SELECT conversationid,
         TO_CHAR(conversationstart, 'DD/MM/YYYY') AS fecha,
         wrapupcodename AS tipificacion,
-        username AS agente,
+        userid AS agente,
         dnis AS telefono,
         queuename,
         conversationstart,
@@ -30,7 +30,15 @@ DetallesConversaciones AS (
         ) AS tiempos
     FROM gns_purecloud.conversations_details
     WHERE segmenttype = 'wrapup'
-        AND username NOT IN ('Jhon Esneider Jimenez Obando', 'Support GNS - 1', 'Andrés Felipe Díaz Guzmán')
+        AND username NOT IN (
+        'Jhon Esneider Jimenez Obando', 
+        'Jhon Esneider Jimenez Obando', 
+        'Linda Lorena Rosero Lemos', 
+        'Support GNS - 1', 
+        'Andrés Felipe Díaz Guzmán',
+        'Giovanni Valencia Buitrago'
+        )
+        and userid not in ('876825a6-9e53-4d82-b8fb-1153dba16164')
         AND queuename LIKE 'Outbound%'
         AND wrapupcodename LIKE 'Out%'
 ),
@@ -51,7 +59,7 @@ MalaPractica AS (
                FROM gns_purecloud.conversations_details
                WHERE conversationid = cd.conversationid
                AND disconnecttype = 'endpoint'
-           ) THEN 'mala practica' ELSE NULL END AS mala_practica
+           ) THEN 1 ELSE NULL END AS mala_practica
     FROM DetallesConversaciones cd
 ),
 UltimaLlamadaPorTelefono AS (
@@ -65,7 +73,7 @@ UltimaLlamadaPorTelefono AS (
         SUBSTRING(cd.telefono, 6) AS telefono,
         cd.queuename,
         mp.mala_practica,
-        cd.tiempos,  
+        cd.tiempos, 
         ROW_NUMBER() OVER (PARTITION BY cd.fecha, SUBSTRING(cd.telefono, 6) ORDER BY ca.hora DESC) AS fila_num
     FROM Citaciones AS ca
     LEFT JOIN DetallesConversaciones AS cd ON ca.conversationid = cd.conversationid

@@ -1,5 +1,5 @@
 WITH login AS (
-  SELECT
+  SELECT 
       userid,
       username,
       to_char(presencestarttime AT TIME ZONE 'UTC' AT TIME ZONE 'UTC-5','DD/MM/YYYY') AS date,

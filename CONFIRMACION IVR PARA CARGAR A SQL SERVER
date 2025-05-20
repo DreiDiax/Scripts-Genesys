@@ -1,0 +1,32 @@
+--   ESTE SCRIPT ES PARA EXTRAER LAS TIPIFICACIONES DEL IVR PARA CARGARLO EN EL SQL SERVER
+
+WITH a AS (
+    SELECT 
+        conversationid,
+        value,
+        to_char(participantstarttime, 'DD/MM/YYYY') AS fecha,
+        TO_CHAR(participantstarttime, 'HH24:MI:SS') as hora_inicio,
+        TO_CHAR(participantendtime, 'HH24:MI:SS') as hora_fin
+    FROM 
+        gns_purecloud.conversation_attributes
+    WHERE 
+        participantname = '002-FVL-PROD-2.0-Outbound_Confirmacio_SinAgente_Campana'
+        AND key = 'dialerContactId'
+        AND participantstarttime BETWEEN TIMESTAMP '2025-05-01 00:00:00' AND TIMESTAMP '2025-05-15 23:59:59'
+),
+c as ( 
+    SELECT wrapupcodename, conversationid 
+    FROM 
+        gns_purecloud.conversations_details cd 
+    WHERE
+       participantname = '002-FVL-PROD-2.0-Outbound_Confirmacio_SinAgente_Campana'
+       and segmenttype = 'wrapup'
+)
+SELECT 
+    a.value,
+    a.fecha,
+    a.hora_inicio,
+    a.hora_fin,
+    COALESCE(c.wrapupcodename, 'Sin tipificación') as tipificacion
+FROM a
+LEFT JOIN c ON a.conversationid = c.conversationid

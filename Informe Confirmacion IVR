@@ -38,7 +38,7 @@ conversation_info AS
     WHERE 
     	purpose = 'customer'
     GROUP BY 
-        conversationid        
+        conversationid         
 )
 SELECT
     ci.Cedula,

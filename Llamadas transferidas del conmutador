@@ -1,0 +1,29 @@
+-- Script para saber volumen de citas transferidas del conmutador
+
+WITH 
+a AS (  
+    SELECT 
+        conversationid,
+        to_char(participantstart, 'DD/MM/YYYY') AS fecha_inicio,
+        TO_CHAR(participantstart, 'HH24:MI:SS') AS hora_inicio,
+        to_char(participantend, 'DD/MM/YYYY') AS fecha_fin,
+        TO_CHAR(participantend, 'HH24:MI:SS') AS hora_fin,
+        transferfromagent AS desde_agente,
+        transferfromqueue AS desde_cola,
+        transfertoagent AS para_agente,
+        transfertoqueue AS para_cola
+    FROM gns_purecloud.transfer_agent
+    WHERE participantstart BETWEEN '2025-01-01 00:00' AND '2025-05-15 23:59'
+    AND transferfromqueue IN ('Conmutador Central Citas - Ext. 7988', 'Conmutador Institucional')
+)
+SELECT 
+    a.conversationid,
+    a.fecha_inicio, 
+    a.hora_inicio,
+    a.fecha_fin,
+    a.hora_fin,
+    a.desde_agente,
+    a.desde_cola,
+    a.para_agente,
+    a.para_cola
+FROM a

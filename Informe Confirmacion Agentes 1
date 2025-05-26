@@ -8,7 +8,7 @@ WITH Citaciones AS (
     WHERE purpose = 'agent'
         AND key = 'dialerContactId'
         AND TO_DATE(TO_CHAR(participantstarttime, 'YYYY-MM-DD'), 'YYYY-MM-DD') BETWEEN '2024-10-01' AND '2024-10-30'
-
+ 
 ),
 DetallesConversaciones AS (
     SELECT conversationid,

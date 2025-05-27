@@ -1,3 +1,4 @@
+with a as (
 select
 conversationid,
 to_char(participantstarttime,'DD/MM/YYYY') as fecha,
@@ -5,4 +6,29 @@ participantname as telefono,
 value as cedula
 FROM gns_purecloud.conversation_attributes
 where "key" = 'NumeroDocumento'
-and value = 'aqui va el numero de cedula'
+and value = 'AQUI VA EL NUMERO DE CEDULA'
+),
+b as (
+select
+conversationid,
+originatingdirection as direccion
+FROM gns_purecloud.conversations_details
+),
+c as (
+select
+conversationid,
+username as agente,
+queuename as cola
+FROM gns_purecloud.agent_summary_v2
+)
+select
+distinct a.conversationid,
+a.fecha,
+a.telefono,
+a.cedula,
+b.direccion,
+c.agente,
+c.cola
+from a
+left join b on a.conversationid = b.conversationid
+left join c on a.conversationid = c.conversationid

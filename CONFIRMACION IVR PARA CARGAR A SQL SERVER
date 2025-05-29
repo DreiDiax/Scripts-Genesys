@@ -7,7 +7,7 @@ WITH a AS (
         to_char(participantstarttime, 'DD/MM/YYYY') AS fecha,
         TO_CHAR(participantstarttime, 'HH24:MI:SS') as hora_inicio,
         TO_CHAR(participantendtime, 'HH24:MI:SS') as hora_fin
-    FROM 
+    FROM  
         gns_purecloud.conversation_attributes
     WHERE 
         participantname = '002-FVL-PROD-2.0-Outbound_Confirmacio_SinAgente_Campana'

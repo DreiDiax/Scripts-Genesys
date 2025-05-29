@@ -9,24 +9,23 @@ WITH ca AS (
     FROM 
         gns_purecloud.conversation_attributes
     WHERE 
-        participantstarttime >= '2024-12-01 00:00'
+        participantstarttime between '2025-05-16 00:00' and '2025-05-25 23:59'
         AND key = 'Flow_Outbound'
         AND value NOT IN ('BOT_Outbound_process_INASISTENCIAS', 'Chat_doble_via_sche_open_pref_agent')
 ),
 ca2 AS (
-    SELECT
-        distinct (conversationid) as conversationid,
-        SUBSTRING(value FROM 0 FOR POSITION('_' IN value)) AS especialidad
-    FROM 
-        gns_purecloud.conversation_attributes
-    WHERE 
-        participantstarttime >= '2024-12-01 00:00'
-        AND key IN ('Outbound_Process_Pos', 'Outbound_Process_Mp')
+	SELECT
+	    DISTINCT (conversationid) AS conversationid,
+	    TRIM(LEADING '- ' FROM SUBSTRING(value FROM 0 FOR POSITION('_' IN value))) AS especialidad
+	FROM 
+	    gns_purecloud.conversation_attributes
+	WHERE 
+	    participantstarttime BETWEEN '2025-05-16 00:00' AND '2025-05-25 23:59'
+	    AND key IN ('Outbound_Process_Pos', 'Outbound_Process_Mp')
 ),
 ca3 AS (
     SELECT
         distinct (conversationid) as conversationid,
-        value,
         CASE 
             WHEN value LIKE '%Confirmacion_asistencia_OPC_1%' THEN 'Confirmado'
             WHEN value LIKE '%Menu_cancelar_cita_OPC_1%' THEN 'Cancelado'
@@ -35,8 +34,18 @@ ca3 AS (
     FROM 
         gns_purecloud.conversation_attributes
     WHERE 
-        participantstarttime >= '2024-12-17 00:00'
+        participantstarttime between '2025-05-16 00:00' and '2025-05-25 23:59'
         AND key IN ('Outbound_Process_Pos', 'Outbound_Process_Mp')
+),
+ca4 AS (
+    SELECT
+        distinct (conversationid) as conversationid,
+		value AS id_cita
+    FROM 
+        gns_purecloud.conversation_attributes
+    WHERE 
+        participantstarttime between '2025-05-16 00:00' and '2025-05-25 23:59'
+        AND key = 'id_cita'
 ),
 cd AS (
     SELECT
@@ -69,22 +78,20 @@ cs AS (
     WHERE 
         chandle = 1
 )
-SELECT 
+select
+	ca.conversationid,
     ca.participantstarttime,
     ca.participantname,
     ca.hora,
     ca2.especialidad,
     ca.key,
     ca3.estado,
-    cd.botflow,
-    cd2.acd,
-    cs.totalagentholdduration,
-    cs.totalagenttalkduration,
-    cs.totalagentwrapupduration,
+    ca4.id_cita,
     cd2.queuename
 FROM ca
 LEFT JOIN ca2 ON ca2.conversationid = ca.conversationid
 LEFT JOIN ca3 ON ca3.conversationid = ca.conversationid
+LEFT JOIN ca4 ON ca4.conversationid = ca.conversationid
 LEFT JOIN cd ON cd.conversationid = ca.conversationid
 LEFT JOIN cd2 ON cd2.conversationid = ca.conversationid
 LEFT JOIN cs ON cs.conversationid = ca.conversationid

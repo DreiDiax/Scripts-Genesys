@@ -1,7 +1,7 @@
 WITH ca AS (
     SELECT
         distinct (conversationid) as conversationid,
-        to_char(participantstarttime, 'DD/MM/YYYY') AS participantstarttime,
+        to_char(participantstarttime, 'DD/MM/YYYY') AS participantstarttime, 
         TO_CHAR(participantstarttime,'HH24:MI:SS') as hora,
         participantname,
         value,

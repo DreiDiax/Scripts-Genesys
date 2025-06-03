@@ -9,7 +9,7 @@ where "key" = 'NumeroDocumento'
 and value = 'AQUI VA EL NUMERO DE CEDULA'
 ),
 b as (
-select
+select 
 conversationid,
 originatingdirection as direccion
 FROM gns_purecloud.conversations_details

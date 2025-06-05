@@ -9,7 +9,7 @@ WITH ca AS (
     FROM 
         gns_purecloud.conversation_attributes
     WHERE 
-        participantstarttime between '2025-05-16 00:00' and '2025-05-25 23:59'
+        participantstarttime between '2025-05-01 00:00' and '2025-05-31 23:59'
         AND key = 'Flow_Outbound'
         AND value NOT IN ('BOT_Outbound_process_INASISTENCIAS', 'Chat_doble_via_sche_open_pref_agent')
 ),
@@ -20,7 +20,7 @@ ca2 AS (
 	FROM 
 	    gns_purecloud.conversation_attributes
 	WHERE 
-	    participantstarttime BETWEEN '2025-05-16 00:00' AND '2025-05-25 23:59'
+	    participantstarttime BETWEEN '2025-05-01 00:00' and '2025-05-31 23:59'
 	    AND key IN ('Outbound_Process_Pos', 'Outbound_Process_Mp')
 ),
 ca3 AS (
@@ -34,7 +34,7 @@ ca3 AS (
     FROM 
         gns_purecloud.conversation_attributes
     WHERE 
-        participantstarttime between '2025-05-16 00:00' and '2025-05-25 23:59'
+        participantstarttime between '2025-05-01 00:00' and '2025-05-31 23:59'
         AND key IN ('Outbound_Process_Pos', 'Outbound_Process_Mp')
 ),
 ca4 AS (
@@ -44,7 +44,7 @@ ca4 AS (
     FROM 
         gns_purecloud.conversation_attributes
     WHERE 
-        participantstarttime between '2025-05-16 00:00' and '2025-05-25 23:59'
+        participantstarttime between '2025-05-01 00:00' and '2025-05-31 23:59'
         AND key = 'id_cita'
 ),
 cd AS (

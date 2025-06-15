@@ -3,7 +3,7 @@
 WITH a AS (
     SELECT 
         conversationid,
-        value,
+        value, 
         to_char(participantstarttime, 'DD/MM/YYYY') AS fecha,
         TO_CHAR(participantstarttime, 'HH24:MI:SS') as hora_inicio,
         TO_CHAR(participantendtime, 'HH24:MI:SS') as hora_fin

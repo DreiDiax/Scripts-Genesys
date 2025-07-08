@@ -1,0 +1,40 @@
+with asv as (
+select
+	conversationid,
+	to_char(conversationstarttime,'DD/MM/YYYY') as Fecha,
+	to_char(conversationstarttime,'HH24:00:SS') as hora,
+	username,
+	queuename,
+	(totalagentholdduration + totalagenttalkduration + totalagentwrapupduration) as Aht
+from
+	gns_purecloud.agent_summary_v2
+where
+	conversationstarttime >= '2025-01-01'
+	and direction = 'inbound'
+	and mediatype = 'message'
+	and queuename != 'Chat doble via'
+	and chandle = 1
+),
+cd as (
+select
+	conversationid,
+	wrapupcodename,
+	username,
+	queuename,
+	purpose
+from
+	gns_purecloud.conversations_details
+where
+	conversationstart >= '2025-01-01'
+	and segmenttype = 'wrapup'
+)
+select 
+	asv.conversationid,
+	asv.fecha,
+	asv.hora,
+	asv.username,
+	asv.queuename,
+	asv.aht,
+	cd.wrapupcodename
+from asv
+left join cd on asv.conversationid = cd.conversationid and asv.username = cd.username and asv.queuename = cd.queuename

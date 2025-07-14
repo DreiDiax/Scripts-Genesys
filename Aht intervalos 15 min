@@ -1,0 +1,27 @@
+SELECT 
+    to_char(conversationstarttime, 'DD/MM/YYYY') as fecha,
+    to_char(
+        date_trunc('hour', conversationstarttime) + 
+        (floor(date_part('minute', conversationstarttime)/15)*15) * interval '1 minute',
+        'HH24:MI:SS'
+    ) as hora,
+    queuename,
+    sum(offered) as offered,
+    sum(answered) as answered,
+    sum(totalagentholdduration) as totalagentholdduration,
+    sum(totalagentwrapupduration) as totalagentwrapupduration,
+    sum(totalagenttalkduration) as totalagenttalkduration
+FROM gns_purecloud.conversations_summary
+where conversationstarttime between '2025-06-01' and '2025-06-30'
+    and mediatype = 'voice'
+    and direction = 'inbound'
+    and queuename in ('Gastroenterologia - Ext. 7454',
+        'Ortopedia - Ext. 7122',
+        'Reuma Y Neumo - Ext. 7033',
+        'Med Interna E Infectologia - Ext. 7449')
+group by 
+    fecha,
+    date_trunc('hour', conversationstarttime) + 
+    (floor(date_part('minute', conversationstarttime)/15)*15) * interval '1 minute',
+    queuename
+order by fecha, hora, queuename

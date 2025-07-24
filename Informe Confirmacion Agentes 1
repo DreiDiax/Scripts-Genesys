@@ -6,7 +6,7 @@ WITH Citaciones AS (
         key 
     FROM gns_purecloud.conversation_attributes
     WHERE purpose = 'agent'
-        AND key = 'dialerContactId'
+        AND key = 'dialerContactId' 
         AND TO_DATE(TO_CHAR(participantstarttime, 'YYYY-MM-DD'), 'YYYY-MM-DD') BETWEEN '2024-10-01' AND '2024-10-30'
  
 ),

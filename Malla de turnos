@@ -1,0 +1,80 @@
+WITH duration_data AS (
+    SELECT 
+        to_char(conversationstarttime, 'DD/MM/YYYY') as fecha,
+        to_char(
+            date_trunc('hour', conversationstarttime) + 
+            (floor(date_part('minute', conversationstarttime)/15)*15) * interval '1 minute',
+            'HH24:MI:SS'
+        ) as hora,
+        queuename,
+        sum(offered) as offered,
+        sum(answered) as answered,
+        sum(totalagentholdduration) as totalagentholdduration,
+        sum(totalagentwrapupduration) as totalagentwrapupduration,
+        sum(totalagenttalkduration) as totalagenttalkduration,
+        (sum(totalagentholdduration) + sum(totalagenttalkduration) + sum(totalagentwrapupduration)) as total_duration_ms
+    FROM gns_purecloud.conversations_summary
+    WHERE conversationstarttime BETWEEN '2025-07-21' AND '2025-07-28'
+        AND mediatype = 'voice'
+        AND direction = 'inbound'
+        AND queuename IN (
+            'Cardiologia pediatrica y adulto Ext. 7046, Ext 3205',
+            'Cardio No Invasiva Adulto - Ext. 3212',
+            'Conmutador Central Citas - Ext. 7988',
+            'Conmutador Institucional',
+            'Cx Vascular Y Alergologia - Ext. 7004',
+            'Dermatologia - Ext. 7179',
+            'Endocrino - Ext. 7440',
+            'Endoscopia - Ext. 4126',
+            'Especialidades Qx - Ext. 7428',
+            'Fonoaudiología y audiología - Ext. 7120',
+            'Gastroenterologia - Ext. 7454',
+            'Ginecologia - Ext. 7323',
+            'Imagenes Idx - Ext. 3182',
+            'Laboratorio Calidad de Vida Ext. 3153',
+            'Medicina Laboral Ext. 7181',
+            'Med Interna E Infectologia - Ext. 7449',
+            'Med Nuclear - Ext. 3159',
+            'Neuro - Ext. 7253',
+            'Nutricion - Ext. 7120',
+            'Oftalmologia - Ext. 7325',
+            'OGA  - Ext 7185',
+            'Oncologia_Adulto_Ext_7906',
+            'Oncologia_Pediatrica_Ext_7906',
+            'Ortopedia - Ext. 7122',
+            'Pediatria - Ext. 7335',
+            'Preadmisiones - Ext. 4118 - 7111',
+            'Psico Y Psiqui - Ext. 7121',
+            'Quimio - Ext 7185',
+            'Radioterapia - Ext. 4071',
+            'Reh Fisica - Ext. 3234',
+            'Reh Pulmonar - Ext. 7463',
+            'Reuma Y Neumo - Ext. 7033',
+            'Subpediatricas - Ext. 7337',
+            'Trasplantes - Ext. 7903',
+            'Ufca  - Ext 7185',
+            'Urgencias - Ext. 3276',
+            'Urologia Y Odontologia - Ext. 7233'
+        )
+    GROUP BY 
+        fecha,
+        date_trunc('hour', conversationstarttime) + 
+        (floor(date_part('minute', conversationstarttime)/15)*15) * interval '1 minute',
+        queuename
+)
+SELECT 
+    fecha,
+    hora,
+    queuename,
+    offered,
+    answered,
+    totalagentholdduration,
+    totalagentwrapupduration,
+    totalagenttalkduration,
+    total_duration_ms/1000/86400 as duration,
+    CASE 
+        WHEN answered = 0 THEN NULL
+        ELSE (total_duration_ms/1000/86400)/answered 
+    END as aht
+FROM duration_data
+ORDER BY fecha, hora, queuename

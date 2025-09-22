@@ -1,15 +1,15 @@
 WITH ca AS (
     SELECT
         distinct (conversationid) as conversationid,
-        to_char(participantstarttime, 'DD/MM/YYYY') AS participantstarttime, 
-        TO_CHAR(participantstarttime,'HH24:MI:SS') as hora,
+        to_char(participantstarttime, 'DD/MM/YYYY') AS fecha_envio, 
+        TO_CHAR(participantstarttime,'HH24:MI:SS') as hora_envio,
         participantname,
         value,
         key
     FROM 
         gns_purecloud.conversation_attributes
     WHERE 
-        participantstarttime between '2025-05-01 00:00' and '2025-05-31 23:59'
+        participantstarttime between '2025-08-01 00:00' and '2025-08-31 23:59'
         AND key = 'Flow_Outbound'
         AND value NOT IN ('BOT_Outbound_process_INASISTENCIAS', 'Chat_doble_via_sche_open_pref_agent')
 ),
@@ -20,7 +20,7 @@ ca2 AS (
 	FROM 
 	    gns_purecloud.conversation_attributes
 	WHERE 
-	    participantstarttime BETWEEN '2025-05-01 00:00' and '2025-05-31 23:59'
+	    participantstarttime BETWEEN '2025-08-01 00:00' and '2025-08-31 23:59'
 	    AND key IN ('Outbound_Process_Pos', 'Outbound_Process_Mp')
 ),
 ca3 AS (
@@ -34,7 +34,7 @@ ca3 AS (
     FROM 
         gns_purecloud.conversation_attributes
     WHERE 
-        participantstarttime between '2025-05-01 00:00' and '2025-05-31 23:59'
+        participantstarttime between '2025-08-01 00:00' and '2025-08-31 23:59'
         AND key IN ('Outbound_Process_Pos', 'Outbound_Process_Mp')
 ),
 ca4 AS (
@@ -44,7 +44,7 @@ ca4 AS (
     FROM 
         gns_purecloud.conversation_attributes
     WHERE 
-        participantstarttime between '2025-05-01 00:00' and '2025-05-31 23:59'
+        participantstarttime between '2025-08-01 00:00' and '2025-08-31 23:59'
         AND key = 'id_cita'
 ),
 cd AS (
@@ -77,12 +77,33 @@ cs AS (
         gns_purecloud.conversations_summary_v2
     WHERE 
         chandle = 1
+),
+a as(
+select 
+distinct (conversationid) as conversationid,
+value as fecha_cita
+from gns_purecloud.conversation_attributes ca 
+WHERE key = 'Fecha_Cita'
+and participantstarttime between '2025-08-01 00:00' and '2025-08-31 23:59'
+),
+
+b as (
+select 
+distinct (conversationid) as conversationid,
+value as hora_cita
+from gns_purecloud.conversation_attributes ca 
+WHERE key = 'Hora_cita'
+and participantstarttime between '2025-08-01 00:00' and '2025-08-31 23:59'
 )
+
+
 select
 	ca.conversationid,
-    ca.participantstarttime,
+    ca.fecha_envio,
+    ca.hora_envio,
     ca.participantname,
-    ca.hora,
+    a.fecha_cita,
+    b.hora_cita,
     ca2.especialidad,
     ca.key,
     ca3.estado,
@@ -95,3 +116,5 @@ LEFT JOIN ca4 ON ca4.conversationid = ca.conversationid
 LEFT JOIN cd ON cd.conversationid = ca.conversationid
 LEFT JOIN cd2 ON cd2.conversationid = ca.conversationid
 LEFT JOIN cs ON cs.conversationid = ca.conversationid
+left join a on a.conversationid = ca.conversationid
+left join b on b.conversationid = ca.conversationid

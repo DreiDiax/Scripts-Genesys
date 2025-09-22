@@ -1,0 +1,31 @@
+-- BASE IVR IMAGENES DIAGNOSTICAS
+
+with a as(
+    select 
+        conversationid, 
+        TO_CHAR(participantstarttime, 'DD/MM/YYYY') as participantstarttime, 
+        value 
+    from gns_purecloud.conversation_attributes
+    where participantname = '002-FVL-PROD-V2.0-Outbound_Confirmacio_SinAgente_ServiciosAmbulatorios'
+        and key = 'dialerContactId'
+        and participantstarttime between '2025-01-01' and '2025-08-31'
+),
+b as (
+    SELECT 
+        conversationid, 
+        SUBSTRING(dnis FROM '57.*') as dnis,
+        wrapupcodename  
+    FROM gns_purecloud.conversations_details
+    WHERE purpose = 'ivr'
+        AND segmenttype = 'wrapup'
+        AND participantname = '002-FVL-PROD-V2.0-Outbound_Confirmacio_SinAgente_ServiciosAmbulatorios'
+        and conversationstart between '2025-01-01' and '2025-08-31'
+)
+select 
+    a.conversationid,
+    a.participantstarttime,
+    a.value,
+    b.dnis,
+    b.wrapupcodename
+from a
+inner join b on a.conversationid = b.conversationid

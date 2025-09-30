@@ -1,0 +1,14 @@
+SELECT 
+    cd.conversationid,
+    TO_CHAR(cd.conversationstart, 'YYYY-MM-DD') as fecha_inicio,
+    TO_CHAR(cd.conversationend, 'YYYY-MM-DD') as fecha_fin,
+    TO_CHAR(cd.conversationstart, 'HH24:MI:SS') as hora_inicio,
+    TO_CHAR(cd.conversationend, 'HH24:MI:SS') as hora_fin,
+    TO_CHAR((duration) * INTERVAL '1 second', 'HH24:MI:SS') as duracion,
+    cd.username as agente,
+    cd.disconnecttype as tipo_desconexion
+FROM gns_purecloud.conversations_details cd 
+WHERE  cd.segmenttype = 'hold'
+and cd.segmentstart between '2025-09-20' and '2025-09-29'
+and cd.disconnecttype = 'endpoint'
+    

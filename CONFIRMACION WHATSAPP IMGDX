@@ -1,0 +1,48 @@
+-- >>>>>>>>> CONFIRMACION WHATSAPP IMGDX <<<<<<<<< --
+WITH a AS (
+  SELECT
+    conversationid,
+    participantname,
+    MAX(CASE WHEN key = 'Fecha_Cita' THEN value END) as fecha_cita,
+    MAX(CASE WHEN key = 'id_cita' THEN value END) as id_cita,
+    MAX(CASE WHEN key = 'Hora_cita' THEN value END) as hora_cita,
+    MAX(CASE WHEN key = 'numero_Ani' THEN value END) as numero_ani,
+    MAX(CASE WHEN key = 'Nombre_medico' THEN value END) as nombre_medico,
+    MAX(CASE WHEN key = 'Outbound_Process_MP' THEN value END) as outbound_process_mp,
+    MAX(CASE WHEN key = 'customerName' THEN value END) as customer_name,
+    MAX(CASE WHEN key = 'template' THEN value END) as template,
+    MAX(CASE WHEN key = 'customerAccountId' THEN value END) as customer_account_id,
+    MAX(CASE WHEN key = 'Outbound_Process_Mp' THEN value END) as tipo,
+    ROW_NUMBER() OVER (
+      PARTITION BY conversationid 
+      ORDER BY 
+        CASE WHEN MAX(CASE WHEN key = 'id_cita' THEN value END) IS NOT NULL THEN 1 ELSE 2 END,
+        participantname
+    ) as rn
+  FROM gns_purecloud.conversation_attributes
+  WHERE participantstarttime BETWEEN '2025-10-01' AND '2025-10-03'
+  GROUP BY conversationid, participantname
+),
+b AS (
+  SELECT DISTINCT
+    conversationid,
+    participantname
+  FROM gns_purecloud.conversation_attributes
+  WHERE participantstarttime BETWEEN '2025-10-01' AND '2025-10-03'
+    AND value LIKE '%Imagenes%'
+)
+select
+  a.conversationid,
+  a.fecha_cita,
+  a.id_cita,
+  a.participantname,
+  CASE 
+    WHEN a.tipo LIKE '%OPC%' THEN 'confirmado'  
+    WHEN a.tipo LIKE '%Datos_Paciente_sin_valor%' THEN 'ubicado'
+    ELSE 'no ubicado'
+  END as estado
+FROM b
+INNER JOIN a ON b.conversationid = a.conversationid 
+  AND a.participantname = b.participantname
+WHERE a.rn = 1 
+  AND a.tipo IS NOT NULL

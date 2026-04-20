@@ -1,0 +1,25 @@
+with r as (
+	select
+		conversationid,
+		value,
+		"key"
+	from
+		gns_purecloud.conversation_attributes
+	where key = 'Respuesta_Riesgo_Caida'
+	and participantstarttime between '2026-04-17 00:00:00' and '2026-04-17 23:59:59'
+),
+d as (
+	select
+	conversationid,
+	value
+from
+	gns_purecloud.conversation_attributes
+where key = 'ivr_documento'
+)
+select
+r.conversationid,
+r.value,
+d.value
+from r
+left join d on d.conversationid = r.conversationid
+where r.value = 'SI'

@@ -1,0 +1,28 @@
+WITH totales AS (
+    SELECT 
+        DATE_TRUNC('month', conversationstarttime) AS mes,
+        -- Suma de minutos cobrados por conversación (minuto completo)
+        SUM(CEIL((totalagenttalkduration + totalagentholdduration ) / 60000.0)) AS minutos_cobrados
+    FROM gns_purecloud.conversations_summary_v2
+    WHERE conversationstarttime BETWEEN '2026-01-01 00:00:00' AND '2026-03-31 23:59:59'
+      AND dnis LIKE '%+570%'
+    GROUP BY 1
+)
+SELECT 
+    CASE EXTRACT(MONTH FROM mes)
+        WHEN 1 THEN 'Enero'
+        WHEN 2 THEN 'Febrero'
+        WHEN 3 THEN 'Marzo'
+        WHEN 4 THEN 'Abril'
+        WHEN 5 THEN 'Mayo'
+        WHEN 6 THEN 'Junio'
+        WHEN 7 THEN 'Julio'
+        WHEN 8 THEN 'Agosto'
+        WHEN 9 THEN 'Septiembre'
+        WHEN 10 THEN 'Octubre'
+        WHEN 11 THEN 'Noviembre'
+        WHEN 12 THEN 'Diciembre'
+    END AS "Mes",
+    minutos_cobrados AS "Total Minutos"
+FROM totales
+ORDER BY mes

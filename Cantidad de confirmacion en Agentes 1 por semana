@@ -1,0 +1,30 @@
+WITH RankedConversations AS (
+SELECT
+cd.conversationid,
+cd.username,
+cd.conversationstart::date AS fecha_date, -- usado para agrupar por mes y semana
+TO_CHAR(cd.conversationstart, 'DD/MM/YYYY') AS fecha,
+TO_CHAR(cd.segmentstart, 'HH24:MI:SS') AS hora,
+cd.wrapupcodename,
+SUBSTRING(cd.dnis FROM 6) AS telefono,
+cd.queuename,
+ca.value AS id_cita,
+ROW_NUMBER() OVER (
+PARTITION BY ca.value
+ORDER BY cd.segmentstart DESC) as posicion
+FROM gns_purecloud.conversations_details cd
+LEFT JOIN gns_purecloud.conversation_attributes ca
+ON cd.conversationid = ca.conversationid
+WHERE cd.conversationstart >= '2026-04-01'::timestamp
+AND ca.purpose = 'customer'
+AND cd.segmenttype = 'wrapup'
+AND ca.key = 'dialerContactId'
+AND cd.queuename IN ('Outbound_Confirmacion')
+)
+SELECT
+TO_CHAR(fecha_date, 'MM') AS "Mes",
+TO_CHAR(fecha_date, 'IW') AS "Semana",
+COUNT(*) AS "Cantidad"
+FROM RankedConversations
+WHERE posicion = 1
+GROUP BY "Mes", "Semana"

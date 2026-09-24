@@ -1,0 +1,88 @@
+WITH parking_queues AS (
+    SELECT 'Parqueo WhatsApp' AS q UNION ALL SELECT 'QA_ Parqueo_Whatsapp'
+),
+convos AS (
+    SELECT DISTINCT conversationid
+    FROM gns_purecloud.conversations_details
+    WHERE queuename IN (SELECT q FROM parking_queues)
+      AND segmentstart >= '2026-01-01'
+),
+segments AS (
+    SELECT
+        d.conversationid,
+        d.segmentstart,
+        d.segmentend,
+        d.segmenttype,
+        d.purpose,
+        d.queuename,
+        d.username,
+        d.wrapupcodename,
+        d.disconnecttype,
+        LAG(d.queuename) OVER (PARTITION BY d.conversationid ORDER BY d.segmentstart, d.segmentend) AS prev_q,
+        LAG(d.username) OVER (PARTITION BY d.conversationid ORDER BY d.segmentstart, d.segmentend) AS prev_username,
+        LAG(d.wrapupcodename) OVER (PARTITION BY d.conversationid ORDER BY d.segmentstart, d.segmentend) AS prev_wrap,
+        LAG(d.purpose) OVER (PARTITION BY d.conversationid ORDER BY d.segmentstart, d.segmentend) AS prev_purpose,
+        CASE WHEN d.queuename IN (SELECT q FROM parking_queues) THEN 1 ELSE 0 END AS is_parking_q
+    FROM gns_purecloud.conversations_details d
+    WHERE d.conversationid IN (SELECT conversationid FROM convos)
+      AND d.segmentstart >= '2026-01-01'
+),
+parking_entries AS (
+    SELECT
+        s.conversationid,
+        s.segmentstart AS parking_entry_time,
+        s.prev_q AS original_queue,
+        s.prev_username AS original_agent,
+        s.wrapupcodename AS parking_wrapup
+    FROM segments s
+    WHERE s.is_parking_q = 1
+      AND s.purpose = 'acd'
+      AND s.prev_q NOT IN (SELECT q FROM parking_queues)
+      AND s.prev_wrap = 'Parking'
+),
+parking_exits AS (
+    SELECT
+        s.conversationid,
+        MIN(s.segmentstart) AS parking_exit_time,
+        MIN(s.queuename) FILTER (WHERE s.purpose = 'acd') AS return_queue,
+        MIN(s.username) FILTER (WHERE s.purpose = 'acd') AS return_agent
+    FROM segments s
+    JOIN parking_entries pe ON s.conversationid = pe.conversationid
+    WHERE s.segmentstart > pe.parking_entry_time
+      AND s.purpose = 'acd'
+      AND s.queuename NOT IN (SELECT q FROM parking_queues)
+    GROUP BY s.conversationid
+),
+final_wrapup AS (
+    SELECT
+        d.conversationid,
+        MAX(CASE WHEN d.segmenttype = 'wrapup' THEN d.wrapupcodename END) AS last_wrapup,
+        MAX(CASE WHEN d.segmenttype = 'wrapup' THEN d.username END) AS last_wrapup_agent,
+        MAX(CASE WHEN d.segmenttype = 'wrapup' THEN d.disconnecttype END) AS last_disconnect
+    FROM gns_purecloud.conversations_details d
+    WHERE d.conversationid IN (SELECT conversationid FROM parking_entries)
+      AND d.segmenttype = 'wrapup'
+    GROUP BY d.conversationid
+)
+SELECT
+    pe.conversationid,
+    pe.original_queue,
+    pe.original_agent,
+    pe.parking_entry_time AT TIME ZONE 'America/Bogota' AS parking_entry_bog,
+    px.parking_exit_time AT TIME ZONE 'America/Bogota' AS parking_exit_bog,
+    px.return_queue,
+    px.return_agent,
+    fw.last_wrapup,
+    fw.last_wrapup_agent,
+    fw.last_disconnect,
+    CASE
+        WHEN px.conversationid IS NULL THEN 'parking_sin_retorno'
+        WHEN fw.last_wrapup ILIKE '%Asignar Cita%' THEN 'gestionado'
+        WHEN fw.last_wrapup ILIKE '%No asigna cita%' THEN 'parking'
+        WHEN fw.last_disconnect = 'client' THEN 'parking'
+        ELSE 'parking'
+    END AS estado_final
+FROM parking_entries pe
+LEFT JOIN parking_exits px ON pe.conversationid = px.conversationid
+LEFT JOIN final_wrapup fw ON pe.conversationid = fw.conversationid
+ORDER BY pe.parking_entry_time DESC;
